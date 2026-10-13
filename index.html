@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Sudoku app</title>
+  <meta name="description" content="Sudoku minimalista, offline y responsive. Genera tableros infinitos con solución única.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#eef1f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e1118" media="(prefers-color-scheme: dark)">
+
+  <!-- iOS: añadir a pantalla de inicio -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sudoku app">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+  <!-- Iconos -->
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./icons/favicon-32.png" type="image/png" sizes="32x32">
+
+  <!-- Tema inicial sin destello: aplicar data-theme antes del CSS -->
+  <script>
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('sudoku-app:v1:settings') || '{}');
+        var t = s.theme || 'auto';
+        var dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      } catch (e) {
+        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="topbar glass">
+      <div class="topbar__row">
+        <h1 class="topbar__title">Sudoku app</h1>
+        <div class="topbar__actions">
+          <button type="button" class="icon-btn" id="btn-tips" title="Reglas y consejos" aria-label="Reglas y consejos">?</button>
+          <button type="button" class="icon-btn" id="btn-stats" title="Estadísticas" aria-label="Estadísticas">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="btn-settings" title="Ajustes" aria-label="Ajustes">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="topbar__row topbar__row--controls">
+        <label class="difficulty">
+          <span class="difficulty__label">Dificultad</span>
+          <select id="difficulty-select" class="difficulty__select" aria-label="Dificultad">
+            <option value="easy">Fácil</option>
+            <option value="medium">Media</option>
+            <option value="hard">Difícil</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn--primary" id="btn-new">Nuevo juego</button>
+      </div>
+    </header>
+
+    <section class="hud glass" aria-label="Estado de la partida">
+      <div class="hud__item" id="hud-timer">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+        <span class="hud__value hud__timer" id="timer-display">00:00</span>
+      </div>
+      <div class="hud__item" id="hud-mistakes">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9.2"/></svg>
+        <span class="hud__value"><span id="mistakes-display">0</span> errores</span>
+      </div>
+      <label class="switch" id="autocheck-switch-wrap" title="Comprobación en tiempo real">
+        <span class="switch__label">Auto</span>
+        <input type="checkbox" id="autocheck-switch" class="switch__input">
+        <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+      </label>
+    </section>
+
+    <main class="board-wrap">
+      <div class="board" id="board" role="grid" aria-label="Tablero de sudoku"></div>
+    </main>
+
+    <footer class="dock">
+      <section class="numpad glass" aria-label="Teclado numérico">
+        <div class="numpad__grid" id="numpad"></div>
+      </section>
+      <div class="actions">
+        <button type="button" class="btn" id="btn-verify">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+          Verificar
+        </button>
+      </div>
+      <p class="kbd-hint" id="kbd-hint">Flechas para moverte · 1-9 para escribir · Retroceso para borrar</p>
+    </footer>
+  </div>
+
+  <!-- Diálogos -->
+  <dialog class="dialog glass" id="dialog-confirm">
+    <form method="dialog" class="dialog__form">
+      <h2 class="dialog__title" id="confirm-title">¿Nuevo juego?</h2>
+      <p class="dialog__text" id="confirm-text">Perderás el progreso de la partida actual.</p>
+      <div class="dialog__actions">
+        <button type="submit" value="cancel" class="btn">Cancelar</button>
+        <button type="submit" value="ok" class="btn btn--primary" id="confirm-ok">Nuevo juego</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialog dialog--win glass" id="dialog-win">
+    <div class="win">
+      <div class="win__badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+      </div>
+      <h2 class="win__title">¡Felicidades!</h2>
+      <p class="win__record" id="win-record" hidden>¡Nuevo récord personal!</p>
+      <dl class="win__stats">
+        <div class="win__stat"><dt>Tiempo</dt><dd id="win-time">00:00</dd></div>
+        <div class="win__stat"><dt>Dificultad</dt><dd id="win-difficulty">Fácil</dd></div>
+        <div class="win__stat"><dt>Errores</dt><dd id="win-mistakes">0</dd></div>
+      </dl>
+      <div class="dialog__actions">
+        <button type="button" class="btn" id="btn-win-exit">Salir</button>
+        <button type="button" class="btn btn--primary" id="btn-win-new">Nuevo juego</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="dialog dialog--sheet glass" id="dialog-settings">
+    <div class="panel">
+      <header class="panel__header">
+        <h2 class="dialog__title">Ajustes</h2>
+        <button type="button" class="icon-btn" data-close title="Cerrar" aria-label="Cerrar">✕</button>
+      </header>
+
+      <section class="panel__section">
+        <h3 class="panel__heading">Apariencia</h3>
+        <div class="segmented" id="theme-segmented" role="radiogroup" aria-label="Tema">
+          <button type="button" class="segmented__btn" data-theme-choice="auto" role="radio">Automático</button>
+          <button type="button" class="segmented__btn" data-theme-choice="light" role="radio">Claro</button>
+          <button type="button" class="segmented__btn" data-theme-choice="dark" role="radio">Oscuro</button>
+        </div>
+      </section>
+
+      <section class="panel__section">
+        <h3 class="panel__heading">Juego</h3>
+        <label class="setting-row">
+          <span>Comprobación automática</span>
+          <span class="switch">
+            <input type="checkbox" id="settings-autocheck" class="switch__input">
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          </span>
+        </label>
+        <label class="setting-row">
+          <span>Mostrar cronómetro</span>
+          <span class="switch">
+            <input type="checkbox" id="settings-showtimer" class="switch__input">
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          </span>
+        </label>
+      </section>
+
+      <section class="panel__section">
+        <h3 class="panel__heading">Colores del tablero</h3>
+        <div class="presets" id="color-presets">
+          <button type="button" class="preset" data-preset="default"><span class="preset__swatch preset__swatch--default"></span>Predeterminado</button>
+          <button type="button" class="preset" data-preset="classic"><span class="preset__swatch preset__swatch--classic"></span>Clásico</button>
+          <button type="button" class="preset" data-preset="ocean"><span class="preset__swatch preset__swatch--ocean"></span>Océano</button>
+          <button type="button" class="preset" data-preset="rose"><span class="preset__swatch preset__swatch--rose"></span>Rosa</button>
+        </div>
+        <div class="color-pickers">
+          <label class="color-picker">
+            <input type="color" id="color-cell" value="#ffffff">
+            <span>Fondo de celda</span>
+          </label>
+          <label class="color-picker">
+            <input type="color" id="color-alt" value="#e8ebf4">
+            <span>Fondo de caja 3×3</span>
+          </label>
+          <label class="color-picker">
+            <input type="color" id="color-border" value="#3a4152">
+            <span>Borde del tablero</span>
+          </label>
+        </div>
+        <button type="button" class="btn btn--small" id="btn-reset-colors">Restablecer colores</button>
+      </section>
+
+      <footer class="panel__footer">Sudoku app · funciona sin conexión</footer>
+    </div>
+  </dialog>
+
+  <dialog class="dialog dialog--sheet glass" id="dialog-stats">
+    <div class="panel">
+      <header class="panel__header">
+        <h2 class="dialog__title">Estadísticas</h2>
+        <button type="button" class="icon-btn" data-close title="Cerrar" aria-label="Cerrar">✕</button>
+      </header>
+      <div id="stats-content"></div>
+      <footer class="panel__footer">
+        <button type="button" class="btn btn--small btn--danger" id="btn-reset-stats">Borrar estadísticas</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="dialog dialog--sheet glass" id="dialog-tips">
+    <div class="panel">
+      <header class="panel__header">
+        <h2 class="dialog__title">Reglas y consejos</h2>
+        <button type="button" class="icon-btn" data-close title="Cerrar" aria-label="Cerrar">✕</button>
+      </header>
+      <div class="tips">
+        <h3 class="panel__heading">Objetivo</h3>
+        <p>Completa el tablero de 9×9 colocando los números del 1 al 9 sin repetir ninguno en la misma <strong>fila</strong>, <strong>columna</strong> o <strong>caja 3×3</strong>. Cada tablero tiene una única solución.</p>
+        <h3 class="panel__heading">Cómo jugar</h3>
+        <ul class="tips__list">
+          <li>Toca una casilla vacía y elige un número del teclado inferior.</li>
+          <li>En ordenador: muévete con las flechas y escribe los números con el teclado. Retroceso borra.</li>
+          <li>Las casillas más marcadas son pistas fijas: no se pueden cambiar.</li>
+        </ul>
+        <h3 class="panel__heading">Consejos</h3>
+        <ul class="tips__list">
+          <li>Empieza por la fila, columna o caja con más números puestos.</li>
+          <li>Si un número solo cabe en una casilla de una caja, ese es su sitio.</li>
+          <li>Usa <strong>Verificar</strong> para revisar lo que llevas; con <strong>Auto</strong> verás los errores al instante.</li>
+          <li>La partida se guarda sola: puedes cerrar y continuar después.</li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

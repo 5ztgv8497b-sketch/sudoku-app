@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Prueba del motor de sudoku</title>
+  <style>body{font-family:monospace;white-space:pre-wrap;padding:1em}</style>
+</head>
+<body>
+<script type="module">
+import { generatePuzzle, countSolutions, validate, generateFullGrid, solve } from '../js/game.js';
+
+const out = (...a) => document.body.append(a.join(' ') + '\n');
+
+// 1. Rejilla completa siempre válida
+{
+  const t0 = performance.now();
+  for (let k = 0; k < 50; k++) {
+    const g = generateFullGrid();
+    if (g.includes(0)) out('FALLO: rejilla completa con huecos');
+    if (solve(g.slice(), { limit: 2 }) !== 1) out('FALLO: rejilla completa debería tener exactamente 1 solución');
+    // una rejilla a la que se le quita una celda tiene la misma solución única solo si sigue siendo válida;
+    // comprobamos que quitar 1 celda mantiene ≥1 solución
+    const h = g.slice(); h[0] = 0;
+    if (solve(h, { limit: 1 }) !== 1 || h.includes(0)) out('FALLO: resolver con 1 celda quitada no rellena');
+  }
+  out(`✔ 50 rejillas completas generadas en ${(performance.now() - t0).toFixed(0)} ms`);
+}
+
+// 2. Unicidad + rangos de pistas por dificultad
+const CFG = { easy: [40, 45], medium: [32, 36], hard: [26, 30] };
+const N = 100;
+for (const diff of Object.keys(CFG)) {
+  const t0 = performance.now();
+  let ok = true, maxMs = 0, clueSum = 0;
+  for (let k = 0; k < N; k++) {
+    const t1 = performance.now();
+    const { puzzle, solution, clues } = generatePuzzle(diff);
+    const ms = performance.now() - t1;
+    if (ms > maxMs) maxMs = ms;
+    clueSum += clues;
+    const nsol = countSolutions(puzzle, 2);
+    if (nsol !== 1) { ok = false; out(`FALLO ${diff}: puzzle con ${nsol} soluciones`); }
+    if (clues < CFG[diff][0] || clues > CFG[diff][1]) {
+      out(`aviso ${diff}: ${clues} pistas fuera de rango [${CFG[diff]}]`);
+    }
+    const v = validate(solution, solution);
+    if (!v.complete || v.mismatches !== 0) out(`FALLO ${diff}: solución inválida`);
+  }
+  const total = performance.now() - t0;
+  out(`✔ ${diff}: ${N} puzzles únicos, pistas medias ${(clueSum / N).toFixed(1)}, máx ${maxMs.toFixed(0)} ms/puzzle, total ${total.toFixed(0)} ms`);
+}
+
+// 3. Solver conoce un puzzle clásico
+{
+  const classic = '530070000600195000098000060800060003400803001700020006060000280000419005000080079'.split('').map(Number);
+  const g = classic.slice();
+  const n = solve(g, { limit: 1 });
+  out(n === 1 && !g.includes(0) ? '✔ puzzle clásico resuelto' : 'FALLO: puzzle clásico');
+  out('Solución:', g.join('').match(/.{9}/g).join('\n         '));
+}
+
+out('\n— pruebas terminadas —');
+</script>
+</body>
+</html>
