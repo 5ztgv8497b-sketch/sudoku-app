@@ -1,9 +1,5 @@
 // Motor de sudoku — puro, sin DOM. Rejilla plana de 81 enteros, 0 = vacía.
 
-const ROWS = new Uint16Array(9);
-const COLS = new Uint16Array(9);
-const BOXES = new Uint16Array(9);
-
 export function boxIndex(i) {
   const r = Math.floor(i / 9);
   const c = i % 9;
@@ -206,10 +202,6 @@ export function validate(user, solution) {
     mismatches: wrongIndices.length,
     wrongIndices,
   };
-}
-
-export function isGiven(puzzle, i) {
-  return puzzle[i] !== 0;
 }
 
 const PEERS = (() => {

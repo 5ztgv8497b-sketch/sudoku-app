@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo a sangre: sin esquinas transparentes (Android recorta con su máscara; iOS pinta de negro lo transparente) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Arte dentro de la zona segura maskable (círculo de 80 %): escalado al 90 % -->
+  <g transform="translate(256 256) scale(0.9) translate(-256 -256)">
+    <!-- Tablero 3×3 levemente girado -->
+    <g transform="rotate(-8 256 256)">
+      <g fill="#ffffff" fill-opacity="0.96">
+        <rect x="128" y="128" width="256" height="256" rx="28"/>
+      </g>
+      <!-- líneas de la rejilla -->
+      <g stroke="#6366f1" stroke-opacity="0.35" stroke-width="8">
+        <line x1="213.3" y1="134" x2="213.3" y2="378"/>
+        <line x1="298.6" y1="134" x2="298.6" y2="378"/>
+        <line x1="134" y1="213.3" x2="378" y2="213.3"/>
+        <line x1="134" y1="298.6" x2="378" y2="298.6"/>
+      </g>
+      <rect x="128" y="128" width="256" height="256" rx="28" fill="none" stroke="#1c2030" stroke-opacity="0.85" stroke-width="14"/>
+      <!-- celdas rellenas -->
+      <rect x="143" y="143" width="70.3" height="70.3" rx="12" fill="#1c2030"/>
+      <rect x="313.6" y="143" width="55.4" height="70.3" rx="12" fill="#6366f1"/>
+      <rect x="143" y="298.6" width="70.3" height="55.4" rx="12" fill="#0ea5e9"/>
+      <rect x="228.3" y="228.3" width="70.3" height="70.3" rx="12" fill="#1c2030" fill-opacity="0.22"/>
+    </g>
+  </g>
+</svg>

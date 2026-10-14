@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "Sudoku app",
   "short_name": "Sudoku",
   "description": "Sudoku minimalista, offline y responsive con tableros infinitos.",
@@ -7,12 +8,37 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "categories": ["games", "entertainment"],
   "background_color": "#eef1f8",
   "theme_color": "#eef1f8",
   "icons": [
     { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nuevo juego fácil",
+      "short_name": "Fácil",
+      "url": "./?new=easy",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Nuevo juego medio",
+      "short_name": "Media",
+      "url": "./?new=medium",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Nuevo juego difícil",
+      "short_name": "Difícil",
+      "url": "./?new=hard",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "./screenshots/movil.png", "sizes": "430x932", "type": "image/png", "form_factor": "narrow", "label": "Tablero en el móvil" },
+    { "src": "./screenshots/escritorio.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Tablero en escritorio" }
   ]
 }

@@ -1,62 +1,57 @@
-// Tiempo de enfoque: corre desde 0 al iniciar la partida, pausa cuando la
-// pestaña/app pasa a segundo plano. Mostrar u ocultar el display no afecta el conteo.
+// Cronómetro de enfoque: corre mientras la app está visible y enfocada.
+// El tiempo y su guardado viven en state.js. Aquí solo se despierta una vez por segundo para
+// refrescar el marcador y guardar cada ~3 s (antes repintaba todo el estado 60 veces por segundo).
 
-import { store, flushTimer } from './state.js';
+import { resumeClock, pauseClock, saveClock, elapsedNow, isClockRunning } from './state.js';
 
-let lastTick = null;   // marca de tiempo del último tick while running
-let rafId = null;
-let saveAccum = 0;
+const SAVE_EVERY_MS = 2900; // los ticks llegan cada ~1 s: así se guarda cada ~3 s
+const listeners = new Set();
+let wakeId = null;
+let savedAt = 0; // tiempo transcurrido en el último guardado
 
-function now() {
-  return performance.timeOrigin + performance.now();
+// fn(ms) se llama al arrancar, al parar y cada vez que cambia el segundo mostrado
+export function onClockTick(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
 }
 
-function tick() {
-  rafId = null;
-  if (lastTick == null) return;
-  const { game } = store.getState();
-  if (!game || game.finished || !game.running) { lastTick = null; return; }
-
-  const t = now();
-  const delta = t - lastTick;
-  lastTick = t;
-
-  const elapsed = game.elapsedMs + delta;
-  saveAccum += delta;
-  // Guardar como máximo cada ~3 s para no martillar localStorage
-  if (saveAccum >= 3000) {
-    saveAccum = 0;
-    flushTimer(elapsed);
-  } else {
-    // actualizar solo el display sin persistir
-    store.setState({ game: { ...game, elapsedMs: elapsed } });
-  }
-  schedule();
+function notify() {
+  const ms = elapsedNow();
+  for (const fn of listeners) fn(ms);
 }
 
 function schedule() {
-  if (rafId == null) rafId = requestAnimationFrame(tick);
+  // despertar justo cuando cambia el segundo mostrado: una vez por segundo
+  wakeId = setTimeout(tick, 1000 - (elapsedNow() % 1000) + 1);
+}
+
+function tick() {
+  wakeId = null;
+  if (!isClockRunning()) return;
+  const ms = elapsedNow();
+  if (ms - savedAt >= SAVE_EVERY_MS) {
+    saveClock();
+    savedAt = ms;
+  }
+  notify();
+  schedule();
 }
 
 export function startTimer() {
-  const { game } = store.getState();
-  if (!game || game.finished || !game.running) return;
-  if (lastTick != null) return;
-  lastTick = now();
+  // Con la app oculta no se cuenta: al volver a verla, visibilitychange vuelve a llamar aquí
+  if (document.hidden || !resumeClock()) return;
+  clearTimeout(wakeId);
+  savedAt = elapsedNow();
+  notify();
   schedule();
 }
 
 export function pauseTimer() {
-  if (lastTick == null) return;
-  const t = now();
-  const { game } = store.getState();
-  if (game && !game.finished && game.running) {
-    const elapsed = game.elapsedMs + (t - lastTick);
-    store.setState({ game: { ...game, elapsedMs } });
-    flushTimer(elapsed);
-  }
-  lastTick = null;
-  if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+  if (!isClockRunning()) return;
+  pauseClock();
+  clearTimeout(wakeId);
+  wakeId = null;
+  notify();
 }
 
 // Pausar al ocultar la pestaña o al cerrar la app (iOS ignora beforeunload)
@@ -66,10 +61,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', pauseTimer);
 window.addEventListener('blur', pauseTimer);
-window.addEventListener('focus', () => {
-  // pequeño retardo: al reenfocar, visibilitychange ya habrá arrancado
-  startTimer();
-});
+window.addEventListener('focus', startTimer);
 
 export function formatMs(ms) {
   const total = Math.floor(ms / 1000);

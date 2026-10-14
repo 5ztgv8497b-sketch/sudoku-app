@@ -1,7 +1,7 @@
 // Service worker: precache versionado + cache-first con autocuración.
-// Bump VERSION en cada release para invalidar la caché.
+// VERSION la recalcula `python3 dev/release.py` (hash de ASSETS) antes de publicar.
 
-const VERSION = 'v6';
+const VERSION = 'v558362d5';
 const CACHE = `sudoku-app:${VERSION}`;
 
 const ASSETS = [
@@ -21,6 +21,7 @@ const ASSETS = [
   './js/ui/stats.js',
   './js/ui/confetti.js',
   './js/ui/toast.js',
+  './js/ui/update.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -31,9 +32,12 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
+  // Sin skipWaiting: una versión nueva espera a que la página lo pida (js/ui/update.js)
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

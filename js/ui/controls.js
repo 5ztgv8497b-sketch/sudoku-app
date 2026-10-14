@@ -14,11 +14,8 @@ function createNumpad() {
     btn.dataset.digit = d;
     btn.setAttribute('aria-label', `Número ${d}`);
     btn.innerHTML = `<span class="num-btn__digit">${d}</span><span class="num-btn__count" aria-hidden="true"></span>`;
-    btn.addEventListener('click', () => {
-      inputDigit(d);
-      const { game } = store.getState();
-      if (game && !game.finished) void 0; // la selección se mantiene para escribir en cadena
-    });
+    // la selección se mantiene para escribir en cadena
+    btn.addEventListener('click', () => inputDigit(d));
     frag.append(btn);
     digitButtons.set(d, { btn, countEl: btn.querySelector('.num-btn__count') });
   }
@@ -47,4 +44,4 @@ function render(game) {
 }
 
 createNumpad();
-store.subscribe((s) => render(s.game));
+store.watch((s) => s.game && s.game.user, (_, s) => render(s.game));

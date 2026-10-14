@@ -30,14 +30,6 @@ function writeRaw(key, value) {
   }
 }
 
-function removeRaw(key) {
-  if (available) {
-    try { localStorage.removeItem(key); } catch { /* noop */ }
-  } else {
-    memory.delete(key);
-  }
-}
-
 function parseJSON(raw) {
   try { return JSON.parse(raw); } catch { return null; }
 }
@@ -71,10 +63,6 @@ export function saveGame(game) {
   writeRaw(KEYS.game, JSON.stringify(game));
 }
 
-export function clearGame() {
-  removeRaw(KEYS.game);
-}
-
 /* ---------- Ajustes ---------- */
 
 export function loadSettings() {
@@ -104,7 +92,15 @@ export function saveSettings(settings) {
 export function loadStats() {
   const s = parseJSON(readRaw(KEYS.stats));
   if (!s || typeof s !== 'object' || !s.byDifficulty || !s.total || !Array.isArray(s.recent)) return null;
-  return s;
+  return migrateStats(s);
+}
+
+// v2 añade `abandoned`: los datos v1 se completan a 0 sin perder nada
+function migrateStats(s) {
+  if (s.version >= 2) return s;
+  const withAbandoned = (b) => ({ ...b, abandoned: Number.isFinite(b?.abandoned) ? b.abandoned : 0 });
+  const byDifficulty = Object.fromEntries(Object.entries(s.byDifficulty).map(([d, b]) => [d, withAbandoned(b)]));
+  return { ...s, version: 2, byDifficulty, total: withAbandoned(s.total) };
 }
 
 export function saveStats(stats) {

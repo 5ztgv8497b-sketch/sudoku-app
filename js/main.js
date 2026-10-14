@@ -1,12 +1,13 @@
-// Bootstrap: inicializa estado, conecta eventos globales, diálogos y service worker.
+// Bootstrap: conecta el HUD, los diálogos y el service worker al store, y arranca la partida.
 
-import { store, init, newGame, requestNewGame, openModal, closeModal, verify, updateSettings, toggleTimerHidden } from './state.js';
+import { store, init, newGame, requestNewGame, openModal, closeModal, verify, updateSettings, toggleTimerHidden, elapsedNow } from './state.js';
 import { saveGame } from './storage.js';
-import { startTimer, pauseTimer, formatMs } from './timer.js';
-import { DIFFICULTY_LABEL } from './state.js';
+import { startTimer, onClockTick, formatMs } from './timer.js';
+import { DIFFICULTY_LABEL, hasProgress } from './state.js';
 import { showDialog, hideAll, setHandlers } from './ui/modal.js';
 import { toast } from './ui/toast.js';
 import { fireConfetti } from './ui/confetti.js';
+import { watchForUpdates } from './ui/update.js';
 import './theme.js';
 import './ui/board.js';
 import './ui/controls.js';
@@ -21,41 +22,46 @@ const mistakesDisplay = document.getElementById('mistakes-display');
 const hudTimer = document.getElementById('hud-timer');
 const autocheckSwitch = document.getElementById('autocheck-switch');
 
-const { game } = init();
-if (!game) {
-  newGame(difficultySelect.value);
-} else if (!game.finished) {
-  // reanudar: la selección previa se conserva
-  requestAnimationFrame(() => startTimer());
-} else {
-  // había una partida terminada: arrancar una nueva directamente
-  newGame(game.difficulty);
+// Atajos de la pantalla de inicio (?new=easy|medium|hard): se leen una vez y se quitan de la URL
+function takeShortcut() {
+  const level = new URLSearchParams(location.search).get('new');
+  if (!['easy', 'medium', 'hard'].includes(level)) return null;
+  history.replaceState(null, '', location.pathname);
+  return level;
 }
 
-/* ---------- HUD ---------- */
+/* ---------- HUD: cada parte se repinta solo cuando cambia su dato ---------- */
 
-let lastGameId = null;
+store.watch((s) => s.game && s.game.mistakes, (mistakes) => {
+  if (mistakes != null) mistakesDisplay.textContent = String(mistakes);
+});
 
-store.subscribe((s) => {
-  // Partida nueva o reanudada → asegurar timer en marcha
-  if (s.game && s.game.id !== lastGameId) {
-    lastGameId = s.game.id;
-    if (!s.game.finished) requestAnimationFrame(() => startTimer());
+// Cronómetro: el marcador cambia al cambiar el segundo, no en cada frame.
+// Con el tiempo oculto se muestran guiones, pero el reloj sigue contando.
+function showClock(ms) {
+  const text = store.getState().ui.timerHidden ? '--:--' : formatMs(ms);
+  if (timerDisplay.textContent !== text) timerDisplay.textContent = text;
+}
+onClockTick(showClock);
+store.watch((s) => [s.game && s.game.id, s.game && s.game.finished, s.ui.timerHidden], () => showClock(elapsedNow()));
+
+// Partida nueva o reanudada: el reloj corre desde ya (antes solo arrancaba con el primer toque)
+store.watch((s) => s.game && s.game.id, () => {
+  const { game: current } = store.getState();
+  if (current && !current.finished) startTimer();
+});
+
+// Selector de dificultad al día, salvo mientras se confirma un cambio
+store.watch((s) => [s.game && s.game.difficulty, s.ui.selectedModal], ([difficulty, modal]) => {
+  if (difficulty && difficultySelect.value !== difficulty && modal !== 'confirm-new') {
+    difficultySelect.value = difficulty;
   }
+});
 
-  if (s.game) {
-    // con el tiempo oculto se muestran guiones, pero el reloj sigue contando
-    timerDisplay.textContent = s.ui.timerHidden ? '--:--' : formatMs(s.game.elapsedMs);
-    mistakesDisplay.textContent = String(s.game.mistakes);
-    // No pisar el select mientras se confirma un cambio de dificultad
-    if (difficultySelect.value !== s.game.difficulty && s.ui.selectedModal !== 'confirm-new') {
-      difficultySelect.value = s.game.difficulty;
-    }
-  }
-  hudTimer.style.display = s.settings.showTimer ? '' : 'none';
-  if (autocheckSwitch.checked !== s.settings.autoCheck) autocheckSwitch.checked = s.settings.autoCheck;
-  renderProgress(s);
-  syncTimerHidden(s);
+store.watch((s) => [s.settings.showTimer, s.settings.autoCheck, s.ui.timerHidden], ([showTimer, autoCheck, timerHidden]) => {
+  hudTimer.style.display = showTimer ? '' : 'none';
+  if (autocheckSwitch.checked !== autoCheck) autocheckSwitch.checked = autoCheck;
+  hudTimer.setAttribute('aria-pressed', String(timerHidden));
 });
 
 autocheckSwitch.addEventListener('change', () => {
@@ -107,12 +113,9 @@ function renderProgress(s) {
   lastProgress = pct;
 }
 
-/* ---------- Tap en el cronómetro: ocultar/mostrar el tiempo ---------- */
+store.watch((s) => [s.game && s.game.id, s.game && s.game.user, s.game && s.game.puzzle], () => renderProgress(store.getState()));
 
-function syncTimerHidden(s) {
-  const attr = String(!!s.ui.timerHidden);
-  if (hudTimer.getAttribute('aria-pressed') !== attr) hudTimer.setAttribute('aria-pressed', attr);
-}
+/* ---------- Tap en el cronómetro: ocultar/mostrar el tiempo ---------- */
 
 hudTimer.addEventListener('click', () => {
   toggleTimerHidden();
@@ -128,7 +131,6 @@ hudTimer.addEventListener('keydown', (e) => {
 
 /* ---------- Acciones principales ---------- */
 
-const confirmDialog = document.getElementById('dialog-confirm');
 const confirmOk = document.getElementById('confirm-ok');
 
 // Dificultad elegida mientras se confirma el reinicio
@@ -186,8 +188,8 @@ document.getElementById('btn-win-exit').addEventListener('click', () => {
 
 let currentModal = null;
 
-store.subscribe((s) => {
-  const modal = s.ui.selectedModal;
+store.watch((s) => s.ui.selectedModal, (modal) => {
+  const s = store.getState();
 
   if (modal === 'win' && s.game) {
     winTime.textContent = formatMs(s.game.elapsedMs);
@@ -196,20 +198,18 @@ store.subscribe((s) => {
     winRecord.hidden = !s.ui.isRecord;
   }
 
-  if (modal !== currentModal) {
-    const previous = currentModal;
-    hideAll();
-    currentModal = modal;
-    if (modal) showDialog(modal);
-    if (modal === 'win' && previous !== 'win') fireConfetti(document.getElementById('dialog-win'));
-  }
-
   if (modal === 'confirm-new') {
-    const hasProgress = s.game && !s.game.finished && s.game.user.some((v, i) => v !== s.game.puzzle[i]);
-    document.getElementById('confirm-text').textContent = hasProgress
+    const pending = s.game && !s.game.finished && hasProgress(s.game);
+    document.getElementById('confirm-text').textContent = pending
       ? 'Perderás el progreso de la partida actual.'
       : 'Se generará un tablero nuevo.';
   }
+
+  const previous = currentModal;
+  currentModal = modal;
+  hideAll();
+  if (modal) showDialog(modal);
+  if (modal === 'win' && previous !== 'win') fireConfetti(winDialog);
 });
 
 setHandlers({
@@ -234,6 +234,21 @@ window.addEventListener('pagehide', () => {
   if (game) saveGame(game);
 });
 
+/* ---------- Arranque: al final, con todas las vistas ya suscritas ---------- */
+
+const { game } = init();
+const shortcut = takeShortcut();
+if (!game || game.finished) {
+  // sin partida en curso (o terminada): arrancar una nueva; el atajo elige la dificultad
+  const level = shortcut ?? game?.difficulty ?? difficultySelect.value;
+  newGame(level);
+  difficultySelect.value = level;
+} else if (shortcut) {
+  // reanudar: con partida en curso, el atajo pide confirmación antes de perderla
+  pendingDifficulty = shortcut;
+  requestNewGame(shortcut);
+}
+
 /* ---------- Service worker ---------- */
 // No se registra en localhost para no estorbar el desarrollo con la caché;
 // se prueba directo en la URL desplegada (HTTPS).
@@ -243,6 +258,8 @@ const isProd = location.protocol === 'https:' && location.hostname !== 'localhos
 
 if (swSupported && isProd) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => { /* sin SW: la app funciona igual */ });
+    navigator.serviceWorker.register('./sw.js')
+      .then(watchForUpdates)
+      .catch(() => { /* sin SW: la app funciona igual */ });
   });
 }

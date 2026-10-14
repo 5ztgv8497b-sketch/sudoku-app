@@ -55,5 +55,4 @@ document.getElementById('btn-reset-stats').addEventListener('click', () => {
   toast('Estadísticas borradas');
 });
 
-store.subscribe((s) => render(s.stats));
-render(store.getState().stats);
+store.watch((s) => s.stats, (stats) => render(stats));

@@ -31,8 +31,8 @@ Pruebas del motor (generación/unicidad/tiempos): <http://localhost:8000/dev/eng
 
 ## Publicar una nueva versión
 
-1. Sube los cambios a `main` — GitHub Pages se redespliega solo.
-2. **Importante**: incrementa `VERSION` en `sw.js` para que los clientes reciban la nueva caché.
+1. **Importante**: ejecuta `python3 dev/release.py` antes del commit. Recalcula `VERSION` en `sw.js` a partir del contenido de los assets precacheados, así los clientes reciben la nueva caché sin tener que acordarse de subir el número.
+2. Sube los cambios a `main` — GitHub Pages se redespliega solo. Los clientes instalados ven el aviso «Hay una versión nueva» y pulsan **Actualizar**.
 
 ## Despliegue (GitHub Pages)
 
@@ -47,13 +47,14 @@ La app queda en `https://<usuario>.github.io/sudoku-app/`.
 
 ## Regenerar iconos
 
-Edita `icons/icon.svg` y rasteriza con QuickLook (macOS):
+Rasteriza con QuickLook (macOS). `icon.svg` es el icono redondeado; `icon-maskable.svg` es la versión a sangre (sin esquinas transparentes) que usan iOS y el icono maskable de Android:
 
 ```bash
 cd icons
-for s in 180 192 512 32; do qlmanage -t -s $s icon.svg -o . && mv icon.svg.png icon-$s.png; done
-cp icon-180.png apple-touch-icon.png
-cp icon-512.png icon-maskable-512.png
+for s in 192 512; do qlmanage -t -s $s icon.svg -o . && mv icon.svg.png icon-$s.png; done
+qlmanage -t -s 32 icon.svg -o . && mv icon.svg.png favicon-32.png
+qlmanage -t -s 512 icon-maskable.svg -o . && mv icon-maskable.svg.png icon-maskable-512.png
+qlmanage -t -s 180 icon-maskable.svg -o . && mv icon-maskable.svg.png apple-touch-icon.png
 ```
 
 ## Arquitectura
@@ -64,6 +65,9 @@ js/state.js     store observable + acciones del juego
 js/storage.js   localStorage versionado con validación
 js/timer.js     tiempo de enfoque (pausa en segundo plano)
 js/theme.js     temas + colores personalizados
-js/ui/*         board, controls, modal, settings, stats, toast, confetti
-sw.js           precache versionado + cache-first
+js/ui/*         board, controls, modal, settings, stats, toast, confetti, update
+sw.js           precache versionado + cache-first (VERSION lo fija dev/release.py)
+dev/release.py  recalcula VERSION a partir del contenido de los assets
 ```
+
+**Rendimiento:** cada vista se suscribe con `store.watch(selector, fn)` y solo se repinta cuando cambia su dato. El cronómetro no escribe el estado en cada frame: refresca el marcador una vez por segundo y guarda cada ~3 s. Antes de tocar el render o los temporizadores, mide con `Performance.getMetrics` (CDP) y un `MutationObserver`.

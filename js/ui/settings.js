@@ -59,5 +59,4 @@ document.getElementById('btn-reset-colors').addEventListener('click', () => {
   toast('Colores restablecidos');
 });
 
-store.subscribe((s) => render(s.settings));
-render(store.getState().settings);
+store.watch((s) => s.settings, (settings) => render(settings));

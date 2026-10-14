@@ -487,6 +487,9 @@ body {
 .cell--error {
   background: var(--error-bg) !important;
   color: var(--error-ink) !important;
+  /* Marca que no depende del color: subrayado ondulado */
+  text-decoration: underline wavy;
+  text-underline-offset: 4px;
 }
 
 .cell--flash-ok { animation: flash-ok 0.5s ease; }
@@ -879,6 +882,18 @@ body {
 
 .toast--leaving { animation: toast-out 0.25s ease forwards; }
 
+.toast__action {
+  pointer-events: auto; /* el contenedor no captura toques, pero el botón sí */
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0 0 0 2px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+}
+
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
@@ -1022,6 +1037,13 @@ body {
   .dock .actions .btn { flex: 1; justify-content: center; }
 
   .kbd-hint { display: none; }
+}
+
+/* ---------- Contraste reforzado (Ajustes > Accesibilidad > Aumentar contraste) ---------- */
+@media (prefers-contrast: more) {
+  :root[data-theme='light'] { --board-line: #7d8399; --text-muted: #434a5c; }
+  :root[data-theme='dark'] { --board-line: #5f6880; --text-muted: #c3c8d6; }
+  .cell--error { text-decoration-thickness: 2px; }
 }
 
 /* ---------- Movimiento reducido ---------- */

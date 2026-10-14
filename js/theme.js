@@ -59,15 +59,16 @@ function applyColors() {
   if (colors.boardBorder) root.setProperty('--board-border', colors.boardBorder); else root.removeProperty('--board-border');
 }
 
+// Cambia el sistema entre claro y oscuro: en modo automático cambian también los presets
 mq.addEventListener('change', () => {
-  if (store.getState().settings.theme === 'auto') resolve();
+  if (store.getState().settings.theme === 'auto') {
+    resolve();
+    applyColors();
+  }
 });
 
-store.subscribe(() => {
+// Se aplica de inmediato con el estado actual y cada vez que cambian el tema o los colores
+store.watch((s) => [s.settings.theme, s.settings.colors], () => {
   resolve();
   applyColors();
 });
-
-// Aplicar de inmediato con el estado actual
-resolve();
-applyColors();

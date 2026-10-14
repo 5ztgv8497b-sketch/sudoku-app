@@ -17,10 +17,6 @@ export function setHandlers({ open, close }) {
   onClose = close;
 }
 
-export function getDialog(name) {
-  return DIALOGS[name] ?? null;
-}
-
 export function showDialog(name) {
   const dlg = DIALOGS[name];
   if (dlg && !dlg.open) dlg.showModal();
