@@ -1,7 +1,7 @@
 // Service worker: precache versionado + cache-first con autocuración.
 // VERSION la recalcula `python3 dev/release.py` (hash de ASSETS) antes de publicar.
 
-const VERSION = 'v558362d5';
+const VERSION = 'vc10d1dfc';
 const CACHE = `sudoku-app:${VERSION}`;
 
 const ASSETS = [
