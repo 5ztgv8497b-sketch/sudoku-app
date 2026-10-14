@@ -1,7 +1,7 @@
 // Service worker: precache versionado + cache-first con autocuración.
 // Bump VERSION en cada release para invalidar la caché.
 
-const VERSION = 'v2';
+const VERSION = 'v5';
 const CACHE = `sudoku-app:${VERSION}`;
 
 const ASSETS = [

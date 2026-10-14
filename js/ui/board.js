@@ -48,6 +48,7 @@ function render(game, ui) {
     cell.tabIndex = i === selected ? 0 : -1;
     cell.setAttribute('aria-readonly', String(given));
 
+    cell.classList.toggle('cell--given', given);
     cell.classList.toggle('cell--user', !given && v !== 0);
 
     const isPeer = peers?.has(i) ?? false;

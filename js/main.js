@@ -1,6 +1,6 @@
 // Bootstrap: inicializa estado, conecta eventos globales, diálogos y service worker.
 
-import { store, init, newGame, requestNewGame, openModal, closeModal, verify, updateSettings } from './state.js';
+import { store, init, newGame, requestNewGame, openModal, closeModal, verify, updateSettings, toggleTimerHidden } from './state.js';
 import { saveGame } from './storage.js';
 import { startTimer, pauseTimer, formatMs } from './timer.js';
 import { DIFFICULTY_LABEL } from './state.js';
@@ -44,7 +44,8 @@ store.subscribe((s) => {
   }
 
   if (s.game) {
-    timerDisplay.textContent = formatMs(s.game.elapsedMs);
+    // con el tiempo oculto se muestran guiones, pero el reloj sigue contando
+    timerDisplay.textContent = s.ui.timerHidden ? '--:--' : formatMs(s.game.elapsedMs);
     mistakesDisplay.textContent = String(s.game.mistakes);
     // No pisar el select mientras se confirma un cambio de dificultad
     if (difficultySelect.value !== s.game.difficulty && s.ui.selectedModal !== 'confirm-new') {
@@ -53,10 +54,70 @@ store.subscribe((s) => {
   }
   hudTimer.style.display = s.settings.showTimer ? '' : 'none';
   if (autocheckSwitch.checked !== s.settings.autoCheck) autocheckSwitch.checked = s.settings.autoCheck;
+  renderProgress(s);
+  syncTimerHidden(s);
 });
 
 autocheckSwitch.addEventListener('change', () => {
   updateSettings({ autoCheck: autocheckSwitch.checked });
+});
+
+/* ---------- Barra de progreso (relleno líquido + temblor al avanzar) ---------- */
+
+const progressEl = document.getElementById('board-progress');
+const progressFill = progressEl.querySelector('.progress__fill');
+let lastProgress = null;
+let lastProgressGameId = null;
+
+function renderProgress(s) {
+  if (!s.game) return;
+  let filled = 0;
+  for (const v of s.game.user) if (v) filled++;
+  const pct = Math.round((filled / 81) * 100);
+  if (s.game.id === lastProgressGameId && pct === lastProgress) return;
+
+  progressEl.setAttribute('aria-valuenow', String(pct));
+
+  if (s.game.id !== lastProgressGameId) {
+    // partida nueva o reanudada: fijar el nivel sin animación ni temblor
+    lastProgressGameId = s.game.id;
+    lastProgress = pct;
+    progressFill.style.transition = 'none';
+    progressFill.style.width = `${pct}%`;
+    void progressFill.offsetWidth;
+    progressFill.style.transition = '';
+    return;
+  }
+
+  progressFill.style.width = `${pct}%`;
+  if (pct > lastProgress) {
+    // reactivar el temblor en cada avance
+    progressEl.classList.remove('progress--charging');
+    void progressEl.offsetWidth;
+    progressEl.classList.add('progress--charging');
+  } else if (pct < lastProgress) {
+    progressEl.classList.remove('progress--charging');
+  }
+  lastProgress = pct;
+}
+
+/* ---------- Tap en el cronómetro: ocultar/mostrar el tiempo ---------- */
+
+function syncTimerHidden(s) {
+  const attr = String(!!s.ui.timerHidden);
+  if (hudTimer.getAttribute('aria-pressed') !== attr) hudTimer.setAttribute('aria-pressed', attr);
+}
+
+hudTimer.addEventListener('click', () => {
+  toggleTimerHidden();
+  toast(store.getState().ui.timerHidden ? 'Cronómetro oculto' : 'Cronómetro visible');
+});
+
+hudTimer.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    hudTimer.click();
+  }
 });
 
 /* ---------- Acciones principales ---------- */

@@ -69,7 +69,7 @@
     </header>
 
     <section class="hud glass" aria-label="Estado de la partida">
-      <div class="hud__item" id="hud-timer">
+      <div class="hud__item hud__item--toggle" id="hud-timer" role="button" tabindex="0" aria-pressed="false" title="Ocultar o mostrar el tiempo">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
         <span class="hud__value hud__timer" id="timer-display">00:00</span>
       </div>
@@ -82,6 +82,9 @@
         <input type="checkbox" id="autocheck-switch" class="switch__input">
         <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
       </label>
+      <div class="progress" id="board-progress" role="progressbar" aria-label="Progreso del tablero" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress__fill"><span class="progress__wave"></span></div>
+      </div>
     </section>
 
     <main class="board-wrap">
@@ -222,7 +225,8 @@
         <ul class="tips__list">
           <li>Toca una casilla vacía y elige un número del teclado inferior.</li>
           <li>En ordenador: muévete con las flechas y escribe los números con el teclado. Retroceso borra.</li>
-          <li>Las casillas más marcadas son pistas fijas: no se pueden cambiar.</li>
+          <li>Toca el cronómetro para ocultar el tiempo (verás guiones) y jugar sin prisa; toca otra vez para verlo.</li>
+          <li>Las casillas con el fondo levemente más oscuro son pistas fijas: no se pueden cambiar.</li>
         </ul>
         <h3 class="panel__heading">Consejos</h3>
         <ul class="tips__list">

@@ -43,7 +43,7 @@ export const store = createStore({
   game: null,
   settings: DEFAULT_SETTINGS,
   stats: EMPTY_STATS,
-  ui: { selectedModal: null, verifiedWrong: [], lastResult: null },
+  ui: { selectedModal: null, verifiedWrong: [], lastResult: null, timerHidden: false },
 });
 
 /* ---------- Inicialización ---------- */
@@ -78,7 +78,7 @@ export function newGame(difficulty) {
   };
   store.setState({
     game,
-    ui: { ...store.getState().ui, selectedModal: null, verifiedWrong: [], lastResult: null },
+    ui: { ...store.getState().ui, selectedModal: null, verifiedWrong: [], lastResult: null, timerHidden: false },
   });
   saveGame(game);
   return game;
@@ -151,6 +151,11 @@ export function clearCellMarks() {
   store.setState({ ui: { ...ui, verifiedWrong: [], lastResult: null } });
 }
 
+export function toggleTimerHidden() {
+  const { ui } = store.getState();
+  store.setState({ ui: { ...ui, timerHidden: !ui.timerHidden } });
+}
+
 export function verify() {
   const { game } = store.getState();
   if (!game) return { empty: 0, filled: 0, mismatches: 0, complete: false, wrongIndices: [] };
@@ -199,7 +204,7 @@ export function finishGame() {
   store.setState({
     game: finishedGame,
     stats: nextStats,
-    ui: { ...store.getState().ui, selectedModal: 'win', verifiedWrong: [], isRecord: isBest },
+    ui: { ...store.getState().ui, selectedModal: 'win', verifiedWrong: [], isRecord: isBest, timerHidden: false },
   });
   saveGame(finishedGame);
   saveStats(nextStats);
