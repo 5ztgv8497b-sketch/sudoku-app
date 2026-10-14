@@ -1,11 +1,13 @@
 // Confeti en canvas, sin dependencias. Respeta prefers-reduced-motion.
+// Se puede pasar un <dialog> abierto como anfitrión: al vivir en la top layer,
+// el confeti se pinta por encima del velo del diálogo en lugar de quedar oculto.
 
-export function fireConfetti() {
+export function fireConfetti(host = document.body) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const canvas = document.createElement('canvas');
   canvas.className = 'confetti-canvas';
-  document.body.append(canvas);
+  host.append(canvas);
   const ctx = canvas.getContext('2d');
 
   const dpr = Math.min(2, window.devicePixelRatio || 1);

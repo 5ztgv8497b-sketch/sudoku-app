@@ -8,7 +8,6 @@ const themeBtns = document.querySelectorAll('[data-theme-choice]');
 const autocheckInput = document.getElementById('settings-autocheck');
 const showtimerInput = document.getElementById('settings-showtimer');
 const colorCell = document.getElementById('color-cell');
-const colorAlt = document.getElementById('color-alt');
 const colorBorder = document.getElementById('color-border');
 const presetBtns = document.querySelectorAll('.preset');
 
@@ -29,7 +28,6 @@ function render(settings) {
 
   const c = resolvedColors(settings.colors);
   colorCell.value = c.cellBg || FALLBACKS.cellBg;
-  colorAlt.value = c.cellAlt || FALLBACKS.cellAlt;
   colorBorder.value = c.boardBorder || FALLBACKS.boardBorder;
 
   const activePreset = settings.colors.preset || 'default';
@@ -52,7 +50,7 @@ for (const btn of presetBtns) {
   });
 }
 
-for (const [input, key] of [[colorCell, 'cellBg'], [colorAlt, 'cellAlt'], [colorBorder, 'boardBorder']]) {
+for (const [input, key] of [[colorCell, 'cellBg'], [colorBorder, 'boardBorder']]) {
   input.addEventListener('input', () => updateSettings({ colors: { [key]: input.value, preset: null } }));
 }
 

@@ -16,9 +16,6 @@ function createCells() {
     btn.dataset.index = i;
     btn.dataset.row = Math.floor(i / 9);
     btn.dataset.col = i % 9;
-    const br = Math.floor(Math.floor(i / 9) / 3);
-    const bc = Math.floor((i % 9) / 3);
-    if ((br + bc) % 2 === 1) btn.classList.add('cell--alt');
     btn.setAttribute('role', 'gridcell');
     btn.setAttribute('aria-label', `Fila ${btn.dataset.row * 1 + 1}, columna ${Number(btn.dataset.col) + 1}`);
     btn.addEventListener('click', () => {

@@ -71,9 +71,15 @@ let lastProgressGameId = null;
 
 function renderProgress(s) {
   if (!s.game) return;
-  let filled = 0;
-  for (const v of s.game.user) if (v) filled++;
-  const pct = Math.round((filled / 81) * 100);
+  // El avance cuenta solo las casillas que el usuario descubre: las pistas fijas no suman
+  let solved = 0;
+  let pending = 0;
+  for (let i = 0; i < 81; i++) {
+    if (s.game.puzzle[i]) continue;
+    if (s.game.user[i]) solved++;
+    else pending++;
+  }
+  const pct = solved + pending > 0 ? Math.round((solved / (solved + pending)) * 100) : 0;
   if (s.game.id === lastProgressGameId && pct === lastProgress) return;
 
   progressEl.setAttribute('aria-valuenow', String(pct));
@@ -195,7 +201,7 @@ store.subscribe((s) => {
     hideAll();
     currentModal = modal;
     if (modal) showDialog(modal);
-    if (modal === 'win' && previous !== 'win') fireConfetti();
+    if (modal === 'win' && previous !== 'win') fireConfetti(document.getElementById('dialog-win'));
   }
 
   if (modal === 'confirm-new') {
